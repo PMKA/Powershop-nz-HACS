@@ -1,0 +1,12 @@
+{
+  "domain": "powershop",
+  "name": "Powershop NZ",
+  "version": "1.0.0",
+  "documentation": "https://github.com/PMKA/Powershop-nz-HACS",
+  "issue_tracker": "https://github.com/PMKA/Powershop-nz-HACS/issues",
+  "dependencies": [],
+  "codeowners": ["@PMKA"],
+  "requirements": ["aiohttp>=3.8.0", "beautifulsoup4>=4.9.0"],
+  "iot_class": "cloud_polling",
+  "config_flow": true
+}

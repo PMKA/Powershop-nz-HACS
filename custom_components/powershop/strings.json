@@ -1,0 +1,23 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Powershop Account Setup",
+        "description": "Enter your Powershop account credentials",
+        "data": {
+          "username": "Email Address",
+          "password": "Password"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Powershop website. Please check your internet connection.",
+      "invalid_auth": "Authentication failed. This could be due to: 1) Invalid email/password, 2) Account locked due to multiple failed attempts, 3) Account suspended. Please verify credentials or reset your password if needed.",
+      "account_locked": "Account appears to be locked. Please use the 'Reset/Create Password' link on the Powershop website to unlock your account.",
+      "unknown": "Unexpected error occurred during setup. Please try again."
+    },
+    "abort": {
+      "already_configured": "This Powershop account is already configured"
+    }
+  }
+}

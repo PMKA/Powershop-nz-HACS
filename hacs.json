@@ -1,0 +1,7 @@
+{
+  "name": "Powershop NZ",
+  "content_in_root": false,
+  "filename": "powershop",
+  "country": ["NZ"],
+  "render_readme": true
+}
