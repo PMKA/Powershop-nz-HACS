@@ -8,5 +8,6 @@
   "codeowners": ["@PMKA"],
   "requirements": ["aiohttp>=3.8.0", "beautifulsoup4>=4.9.0"],
   "iot_class": "cloud_polling",
-  "config_flow": true
+  "config_flow": true,
+  "integration_type": "service"
 }
