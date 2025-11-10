@@ -8,12 +8,9 @@ A Home Assistant custom component that allows you to monitor your **Powershop Ne
 
 ## Features
 
-- **Home Assistant Integration**: Native HA sensors with proper device classes
 - **Real-time Rate Monitoring**: Off-peak, peak, and shoulder electricity rates  
-- **Secure Authentication**: Automatic login with rate limiting protection
-- **Time-of-Use Data**: Detailed rate periods extracted from HTML tooltips
+- **Time-of-Use Data**: Detailed rate periods
 - **Regular Updates**: 15-minute refresh interval
-- **Account Protection**: Prevents account lockouts with smart rate limiting
 
 ## Installation
 
@@ -90,16 +87,6 @@ Each period includes the time range and specific rate in c/kWh.
 - Wait 5 seconds minimum between authentication attempts
 - Use "Reset Password" on Powershop website if account gets locked
 
-## Security
-
-- Your credentials are stored securely in Home Assistant
-- The integration uses HTTPS for all communications
-- Session cookies are managed automatically
-
-## 🤝 Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
 ## 📝 Changelog
 
 ### v1.0.0 (2025-11-10)
@@ -110,16 +97,10 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 - Rate limiting protection to prevent account lockouts
 - Async HTTP client with 15-minute update interval
 
-## 🐛 Support
-
-- **Issues**: [GitHub Issues](https://github.com/PMKA/Powershop-nz-HACS/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/PMKA/Powershop-nz-HACS/discussions)
-- **Documentation**: Check this README and integration logs
-
 ## ⚖️ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🚨 Disclaimer
 
-This integration is **not officially affiliated** with Powershop. Use at your own risk. The integration extracts publicly available rate information from your Powershop account dashboard.
+This integration is **not officially affiliated** with Powershop. Use at your own risk, i just wanted my powershop data in HA :)
