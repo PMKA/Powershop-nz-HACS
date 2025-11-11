@@ -1,7 +1,7 @@
 {
   "domain": "powershop",
   "name": "Powershop NZ",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "documentation": "https://github.com/PMKA/Powershop-nz-HACS",
   "issue_tracker": "https://github.com/PMKA/Powershop-nz-HACS/issues",
   "dependencies": [],
