@@ -21,11 +21,11 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from .api import PowershopAPIClient
-from .const import DOMAIN, SCAN_INTERVAL
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-SCAN_INTERVAL_TD = timedelta(seconds=SCAN_INTERVAL)
+SCAN_INTERVAL = timedelta(minutes=15)
 
 SENSORS = [
     SensorEntityDescription(
@@ -65,7 +65,7 @@ class PowershopDataUpdateCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=SCAN_INTERVAL_TD,
+            update_interval=SCAN_INTERVAL,
         )
 
     async def async_shutdown(self) -> None:
