@@ -23,6 +23,7 @@ from homeassistant.helpers.update_coordinator import (
 from .api import AuthError, PowershopAPIClient
 from .const import (
     CONF_ACCOUNT_NUMBER,
+    CONF_PROPERTY_ID,
     CONF_REFRESH_TOKEN,
     DOMAIN,
 )
