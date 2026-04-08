@@ -53,11 +53,7 @@ Authentication uses a one-time password (OTP) sent to your email — no password
 3. Enter your Powershop account email address and click **Submit**
 4. Check your email for the one-time code and enter it, then click **Submit**
 
-The integration will automatically discover your account number and property ID. Your session is maintained with a long-lived refresh token stored securely in Home Assistant.
-
-### Re-authentication
-
-If your session expires, Home Assistant will prompt you to re-authenticate. Simply repeat the OTP process above.
+Your account number and property ID are discovered automatically. Home Assistant will prompt you to re-authenticate if your session ever expires — just repeat the OTP process.
 
 ## Sensors
 
@@ -69,11 +65,11 @@ If your session expires, Home Assistant will prompt you to re-authenticate. Simp
 | `sensor.powershop_shoulder_rate` | Shoulder electricity rate | c/kWh |
 | `sensor.powershop_usage_today` | kWh consumed today (last 24 h) | kWh |
 | `sensor.powershop_usage_billing_period` | kWh consumed this billing period | kWh |
-| `sensor.powershop_cost_billing_period` | Estimated total cost this billing period (= EST) | NZD |
-| `sensor.powershop_period_used_cost` | Confirmed actual spend this billing period (= USED) | NZD |
-| `sensor.powershop_period_estimated_cost` | Full projected cost this billing period (= EST) | NZD |
-| `sensor.powershop_period_still_to_buy` | Pack shortfall — how much more you need to purchase (= STILL TO BUY) | NZD |
-| `sensor.powershop_period_coverage_pct` | % of estimated bill covered by current packs | % |
+| `sensor.powershop_cost_billing_period` | Cost for the current billing period | NZD |
+| `sensor.powershop_period_used_cost` | Actual metered spend so far this billing period | NZD |
+| `sensor.powershop_period_estimated_cost` | Projected total cost for this billing period | NZD |
+| `sensor.powershop_period_still_to_buy` | How much more in packs you'd need to cover this billing period | NZD |
+| `sensor.powershop_period_coverage_pct` | % of projected bill covered by packs already purchased | % |
 | `sensor.powershop_voucher_balance` | Total redeemable Power Pack balance | NZD |
 
 ### Sensor Attributes
@@ -93,29 +89,19 @@ If your session expires, Home Assistant will prompt you to re-authenticate. Simp
 
 ## Troubleshooting
 
-### Didn't receive the OTP email
-- Check your spam/junk folder
-- Ensure you're using the email address registered with your Powershop account
-- Try again — OTP codes expire after a few minutes
+**No OTP email?** Check spam, make sure you're using the right address, and try again — codes expire quickly.
 
-### Sensors show "unavailable"
-- Check **Settings → System → Logs** for errors prefixed with `powershop`
-- The integration will automatically trigger re-authentication if the session has expired
+**Sensors unavailable?** Check **Settings → System → Logs** for anything prefixed with `powershop`. If your session expired, HA will prompt you to log in again.
 
-### Rate data not updating
-- Rates are fetched every 15 minutes; changes on Powershop's end may take a cycle to appear
-- Confirm your account is active at [app.powershop.nz](https://app.powershop.nz)
+**Data stale?** The integration polls every 15 minutes. If things look off, confirm your account is active at [app.powershop.nz](https://app.powershop.nz).
 
 ## 📝 Changelog
 
 ### v2.0.3 (2026-04-09)
-- Fixed `NameError: CONF_PROPERTY_ID` causing all sensors to show unavailable after update
-- Fixed GraphQL HTTP 400 on Power Pack queries (wrong variable type `String!` vs `ID!`)
-- Fixed `ConfigEntryNotReady` being raised inside the sensor platform — coordinator setup moved to `__init__.py` as HA requires
-- Fixed `async_step_reauth` to use the entry data passed by HA (avoids potential `None` email)
-- Fixed `integration_type` from invalid `"service"` to `"hub"`
-- Removed invalid `filename` field from `hacs.json`
-- Converted `logo.png` to RGBA (was palette mode)
+- Fixed all sensors showing unavailable after updating to v2.0.2
+- Fixed Power Pack sensors failing to load on some accounts
+- Fixed integration failing to initialise correctly on HA startup
+- Various HACS compliance fixes
 
 ### v2.0.2 (2026-04-09)
 - Added `Used This Billing Period` sensor — actual confirmed spend (USED in app)
