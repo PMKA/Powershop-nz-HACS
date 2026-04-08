@@ -1,101 +1,98 @@
-# Powershop New Zealand HACS Integration
+<p align="center">
+  <img src="logo.png" alt="Powershop NZ" height="120">
+</p>
+
+# Powershop New Zealand — Home Assistant Integration
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 [![GitHub Release](https://img.shields.io/github/release/PMKA/Powershop-nz-HACS.svg)](https://github.com/PMKA/Powershop-nz-HACS/releases)
 [![GitHub Activity](https://img.shields.io/github/commit-activity/y/PMKA/Powershop-nz-HACS.svg)](https://github.com/PMKA/Powershop-nz-HACS/commits/main)
 
-A Home Assistant custom component that allows you to monitor your **Powershop New Zealand** electricity rates in real-time.
+A Home Assistant custom component for **Powershop New Zealand** customers. Monitor your account balance and time-of-use electricity rates, updated every 15 minutes.
 
 ## Features
 
-- **Real-time Rate Monitoring**: Off-peak, peak, and shoulder electricity rates  
-- **Time-of-Use Data**: Detailed rate periods
-- **Regular Updates**: 15-minute refresh interval
+- **Account Balance** — current balance in NZD
+- **Time-of-Use Rates** — off-peak, peak, and shoulder rates in c/kWh
+- **Passwordless Auth** — uses Powershop's email OTP login (no password stored)
+- **Automatic Token Refresh** — stays authenticated silently in the background
+- **Regular Updates** — 15-minute refresh interval
+
+## Requirements
+
+- A Powershop NZ account at [app.powershop.nz](https://app.powershop.nz)
+- Home Assistant 2024.1 or later
+- HACS (for managed installation)
 
 ## Installation
 
 ### Via HACS (Recommended)
 
-1. Open HACS in Home Assistant
-2. Go to "Integrations"
-3. Click the three dots in the top right corner
-4. Select "Custom repositories"
-5. Add this repository URL: `https://github.com/PMKA/Powershop-nz-HACS`
-6. Select "Integration" as the category
-7. Click "Add"
-8. Find "Powershop" in the list and install it
-9. Restart Home Assistant
+1. Open **HACS** in Home Assistant
+2. Go to **Integrations**
+3. Click the three dots (⋮) in the top right corner → **Custom repositories**
+4. Add `https://github.com/PMKA/Powershop-nz-HACS` and select **Integration**
+5. Click **Add**, then find **Powershop NZ** in the list and install it
+6. Restart Home Assistant
 
 ### Manual Installation
 
-1. Download the `powershop_hacs` folder from this repository
-2. Copy it to your Home Assistant `custom_components` directory  
+1. Download or clone this repository
+2. Copy the `custom_components/powershop/` folder into your HA config's `custom_components/` directory
 3. Restart Home Assistant
 
 ## Configuration
 
-1. Go to Settings > Devices & Services > Integrations
-2. Click "+ ADD INTEGRATION"
-3. Search for "Powershop"
-4. Enter your Powershop account credentials:
-   - Email address
-   - Password
-5. Click "Submit"
+Authentication uses a one-time password (OTP) sent to your email — no password required:
 
-The integration will automatically detect your customer ID and set up sensors.
+1. Go to **Settings → Devices & Services → Add Integration**
+2. Search for **Powershop**
+3. Enter your Powershop account email address and click **Submit**
+4. Check your email for the one-time code and enter it, then click **Submit**
+
+The integration will automatically discover your account number and property ID. Your session is maintained with a long-lived refresh token stored securely in Home Assistant.
+
+### Re-authentication
+
+If your session expires, Home Assistant will prompt you to re-authenticate. Simply repeat the OTP process above.
 
 ## Sensors
 
-- `sensor.off_peak_rate` - Off-peak rate (typically 12am-7am)
-- `sensor.peak_rate` - Peak rate (typically morning/evening)
-- `sensor.shoulder_rate` - Shoulder rate (typically midday)
-
-## Attributes
-
-Each sensor includes focused attributes for its specific rate period:
-- `customer_id`: Your Powershop customer ID
-- `last_updated`: When the data was last refreshed
-- `period_name`: The full name of the rate period (e.g., "Off Peak")
-- `time_range`: The time period when this rate applies (e.g., "12am - 7am")
-- `rate_value`: The rate value in cents per kWh
-- `rate_formatted`: Human-readable formatted rate (e.g., "19.08 c/kWh")
-
-### Time-of-Use Information
-When available, the integration extracts detailed rate periods including:
-- Off Peak (typically 12am-7am): Lowest rates
-- Peak (typically 7am-11am, 5pm-9pm): Highest rates  
-- Shoulder (typically 11am-5pm): Mid-range rates
-
-Each period includes the time range and specific rate in c/kWh.
+| Entity | Description | Unit |
+|--------|-------------|------|
+| `sensor.powershop_balance` | Current account balance | NZD |
+| `sensor.powershop_off_peak_rate` | Off-peak electricity rate | c/kWh |
+| `sensor.powershop_peak_rate` | Peak electricity rate | c/kWh |
+| `sensor.powershop_shoulder_rate` | Shoulder electricity rate | c/kWh |
 
 ## Troubleshooting
 
-### Authentication Issues
-- Verify your email and password are correct
-- Check that your account is active
-- Ensure you can log in to the Powershop website
+### Didn't receive the OTP email
+- Check your spam/junk folder
+- Ensure you're using the email address registered with your Powershop account
+- Try again — OTP codes expire after a few minutes
 
-### Rate Data Not Updating
-- Check the Home Assistant logs for errors
-- The integration updates every 15 minutes
-- Rate changes may take time to appear on the Powershop website
-- Ensure you can see rate information when logged into Powershop website
+### Sensors show "unavailable"
+- Check **Settings → System → Logs** for errors prefixed with `powershop`
+- The integration will automatically trigger re-authentication if the session has expired
 
-### Account Lockout Protection
-- The integration includes rate limiting to prevent account lockouts
-- If authentication fails 3 times, it will stop trying
-- Wait 5 seconds minimum between authentication attempts
-- Use "Reset Password" on Powershop website if account gets locked
+### Rate data not updating
+- Rates are fetched every 15 minutes; changes on Powershop's end may take a cycle to appear
+- Confirm your account is active at [app.powershop.nz](https://app.powershop.nz)
 
 ## 📝 Changelog
 
+### v2.0.0 (2026-04-08)
+- Full rewrite for the new Powershop app (`app.powershop.nz`)
+- Replaced HTML scraping with Firebase OTP authentication + GraphQL API
+- Added account balance sensor
+- Passwordless login — no password ever stored
+- Automatic session refresh with long-lived tokens
+- Re-authentication support via HA config flow
+
 ### v1.0.0 (2025-11-10)
 - Initial release
-- Support for Powershop New Zealand rate monitoring
-- Three focused sensors: off_peak_rate, peak_rate, shoulder_rate
-- HTML tooltip parsing for detailed time-of-use information
-- Rate limiting protection to prevent account lockouts
-- Async HTTP client with 15-minute update interval
+- Rate monitoring via the legacy `secure.powershop.co.nz` site
 
 ## ⚖️ License
 
