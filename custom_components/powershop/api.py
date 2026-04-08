@@ -3,6 +3,7 @@ import asyncio
 import uuid
 import logging
 import re
+from calendar import monthrange
 from datetime import date, datetime, timedelta
 from typing import Any, Dict, List, Optional
 
@@ -119,8 +120,18 @@ query measurements(
 """
 
 _VOUCHERS_QUERY = """
-query vouchersForAccount($accountNumber: String!) {
-  vouchersForAccount(accountNumber: $accountNumber) {
+query vouchersForAccount(
+  $accountNumber: String!
+  $availableBeforeDate: Date
+  $availableFromDate: Date
+) {
+  vouchersForAccount(
+    accountNumber: $accountNumber
+    redeemableOnly: true
+    first: 100
+    availableBeforeDate: $availableBeforeDate
+    availableFromDate: $availableFromDate
+  ) {
     edges {
       node {
         id
@@ -140,6 +151,61 @@ query vouchersForAccount($accountNumber: String!) {
     pageInfo {
       hasNextPage
       endCursor
+    }
+  }
+}
+"""
+
+_MEASUREMENTS_DAILY_RANGE_QUERY = """
+query measurementsPeriod(
+  $accountNumber: String!
+  $propertyId: ID!
+  $startOn: Date!
+  $endOn: Date!
+) {
+  account(accountNumber: $accountNumber) {
+    id
+    property(id: $propertyId) {
+      id
+      measurements(
+        first: 62
+        startOn: $startOn
+        endOn: $endOn
+        timezone: "Pacific/Auckland"
+        utilityFilters: [{
+          electricityFilters: {
+            readingDirection: CONSUMPTION
+            readingQuality: COMBINED
+            readingFrequencyType: DAY_INTERVAL
+          }
+        }]
+      ) {
+        ... on MeasurementConnection {
+          edges {
+            node {
+              value
+              readAt
+              ... on IntervalMeasurementType {
+                startAt
+                endAt
+              }
+              metaData {
+                utilityFilters {
+                  ... on ElectricityFiltersOutput {
+                    readingQuality
+                  }
+                }
+                statistics {
+                  type
+                  costInclTax {
+                    estimatedAmount
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
     }
   }
 }
@@ -201,6 +267,31 @@ def _parse_rate(formatted: str) -> Optional[float]:
         return None
     match = re.search(r"(\d+(?:\.\d+)?)", formatted)
     return float(match.group(1)) if match else None
+
+
+def _next_billing_periods(
+    period_start: str, period_end: str, count: int = 5
+) -> List[Dict[str, str]]:
+    """Return *count* future billing period date ranges as ``{start, end}`` dicts.
+
+    Periods are assumed to be monthly with the same start/end day each month.
+    """
+    def _add_months(d: date, n: int) -> date:
+        month = d.month - 1 + n
+        year = d.year + month // 12
+        month = month % 12 + 1
+        day = min(d.day, monthrange(year, month)[1])
+        return date(year, month, day)
+
+    start = date.fromisoformat(period_start)
+    end = date.fromisoformat(period_end)
+    return [
+        {
+            "start": _add_months(start, i).isoformat(),
+            "end": _add_months(end, i).isoformat(),
+        }
+        for i in range(1, count + 1)
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -407,6 +498,36 @@ class PowershopAPIClient:
             return [e["node"] for e in measurements.get("edges", []) if e.get("node")]
         return []
 
+    async def get_measurements_date_range(
+        self,
+        account_number: str,
+        property_id: str,
+        start_on: str,
+        end_on: str,
+    ) -> List[Dict[str, Any]]:
+        """Return daily measurement nodes for a specific date range.
+
+        Each node includes ``metaData.utilityFilters.readingQuality`` so callers
+        can distinguish ``ACTUAL`` (already metered) from ``ESTIMATED`` readings.
+        """
+        data = await self._graphql(
+            _MEASUREMENTS_DAILY_RANGE_QUERY,
+            {
+                "accountNumber": account_number,
+                "propertyId": property_id,
+                "startOn": start_on,
+                "endOn": end_on,
+            },
+        )
+        measurements = (
+            data.get("account", {})
+            .get("property", {})
+            .get("measurements", {})
+        )
+        if isinstance(measurements, dict):
+            return [e["node"] for e in measurements.get("edges", []) if e.get("node")]
+        return []
+
     async def get_agreements(
         self, account_number: str, property_id: str
     ) -> Dict[str, Any]:
@@ -417,19 +538,32 @@ class PowershopAPIClient:
         )
         return data.get("account", {})
 
-    async def get_vouchers(self, account_number: str) -> List[Dict[str, Any]]:
-        """Return all purchased vouchers (packs) with their remaining balances."""
-        data = await self._graphql(
-            _VOUCHERS_QUERY, {"accountNumber": account_number}
-        )
+    async def get_vouchers(
+        self,
+        account_number: str,
+        available_before: Optional[str] = None,
+        available_from: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """Return redeemable vouchers (packs), optionally filtered by availability window.
+
+        *available_before* and *available_from* correspond to the GraphQL
+        ``availableBeforeDate`` / ``availableFromDate`` parameters. Omitting
+        both returns every currently-redeemable pack.
+        """
+        variables: Dict[str, Any] = {"accountNumber": account_number}
+        if available_before:
+            variables["availableBeforeDate"] = available_before
+        if available_from:
+            variables["availableFromDate"] = available_from
+        data = await self._graphql(_VOUCHERS_QUERY, variables)
         edges = data.get("vouchersForAccount", {}).get("edges", [])
         return [e["node"] for e in edges if e.get("node")]
 
     async def get_rate_data(
         self, account_number: str, property_id: str
     ) -> Dict[str, Any]:
-        """Return a combined dict of balance + rate periods + usage for the coordinator."""
-        # Fetch account data, agreements and vouchers in parallel
+        """Return a combined dict of balance, rates, usage, and billing gauge data."""
+        # Fetch account data, agreements and all redeemable vouchers in parallel
         account_data, agreement_data, voucher_nodes = await asyncio.gather(
             self.get_account_data(account_number),
             self.get_agreements(account_number, property_id),
@@ -461,40 +595,76 @@ class PowershopAPIClient:
                 }
             break  # Only process first meter point
 
-        # Fetch measurements: today (hourly) + billing period (daily) in parallel
-        tomorrow = (date.today() + timedelta(days=1)).isoformat()
-        end_on = period_end or tomorrow
-
-        hourly_nodes, daily_nodes = await asyncio.gather(
-            self.get_measurements(account_number, property_id, 24, tomorrow, "HOUR_INTERVAL"),
-            self.get_measurements(account_number, property_id, 35, end_on, "DAY_INTERVAL"),
+        # Compute upcoming billing period date ranges (next 5 months)
+        future_periods = (
+            _next_billing_periods(period_start, period_end, 5)
+            if period_start and period_end
+            else []
         )
 
-        # Today's kWh: sum value of last 24 hourly readings
+        # Fetch all measurements + future period vouchers concurrently
+        tomorrow = (date.today() + timedelta(days=1)).isoformat()
+        coros = (
+            [
+                # hourly today (uses last/endOn — existing query, no readingQuality needed)
+                self.get_measurements(account_number, property_id, 24, tomorrow, "HOUR_INTERVAL"),
+                # current billing period daily (with readingQuality for USED/EST split)
+                self.get_measurements_date_range(
+                    account_number, property_id,
+                    period_start or (date.today() - timedelta(days=30)).isoformat(),
+                    period_end or date.today().isoformat(),
+                ),
+            ]
+            + [
+                self.get_measurements_date_range(
+                    account_number, property_id, fp["start"], fp["end"]
+                )
+                for fp in future_periods
+            ]
+            + [
+                # Future period packs: only packs whose availableFrom falls in that window
+                self.get_vouchers(
+                    account_number,
+                    available_before=fp["end"],
+                    available_from=fp["start"],
+                )
+                for fp in future_periods
+            ]
+        )
+
+        results = await asyncio.gather(*coros)
+        n_future = len(future_periods)
+        hourly_nodes: List[Dict[str, Any]] = results[0]
+        daily_nodes: List[Dict[str, Any]] = results[1]
+        future_meas: List[List[Dict[str, Any]]] = list(results[2: 2 + n_future])
+        future_vouchers: List[List[Dict[str, Any]]] = list(results[2 + n_future:])
+
+        # ── Usage ──────────────────────────────────────────────────────────
         usage_today_kwh = round(
             sum(float(n.get("value") or 0) for n in hourly_nodes), 3
         )
-
-        # Billing period: filter daily nodes to on/after period start
-        if period_start:
-            daily_nodes = [
-                n for n in daily_nodes
-                if (n.get("readAt") or "")[:10] >= period_start
-            ]
         usage_period_kwh = round(
             sum(float(n.get("value") or 0) for n in daily_nodes), 3
         )
 
-        # Billing period cost: sum all costInclTax.estimatedAmount from each day's statistics
-        cost_period_cents = 0.0
+        # ── Cost split: ACTUAL (USED) vs all days including ESTIMATED (EST) ──
+        cost_used_cents = 0.0
+        cost_estimated_cents = 0.0
         for node in daily_nodes:
-            for stat in (node.get("metaData") or {}).get("statistics", []):
-                amt = (stat.get("costInclTax") or {}).get("estimatedAmount")
-                if amt:
-                    cost_period_cents += float(amt)
-        cost_period_nzd = round(cost_period_cents / 100, 2)
+            meta = node.get("metaData") or {}
+            node_quality = (meta.get("utilityFilters") or {}).get("readingQuality", "")
+            node_cost = sum(
+                float((stat.get("costInclTax") or {}).get("estimatedAmount") or 0)
+                for stat in meta.get("statistics", [])
+            )
+            cost_estimated_cents += node_cost
+            if node_quality == "ACTUAL":
+                cost_used_cents += node_cost
 
-        # Voucher totals
+        cost_used_nzd = round(cost_used_cents / 100, 2)
+        cost_estimated_nzd = round(cost_estimated_cents / 100, 2)
+
+        # ── Voucher totals (all currently redeemable packs) ────────────────
         voucher_balance_nzd = round(
             sum(float(v.get("balance") or 0) for v in voucher_nodes) / 100, 2
         )
@@ -510,6 +680,49 @@ class PowershopAPIClient:
             if float(v.get("balance") or 0) > 0
         ]
 
+        # ── Gauge calculations: current period ─────────────────────────────
+        cost_still_to_buy_nzd = round(
+            max(0.0, cost_estimated_nzd - voucher_balance_nzd), 2
+        )
+        period_coverage_pct = round(
+            min(100.0, voucher_balance_nzd / cost_estimated_nzd * 100)
+            if cost_estimated_nzd > 0
+            else 100.0,
+            1,
+        )
+
+        # ── Upcoming billing periods ───────────────────────────────────────
+        upcoming_periods: List[Dict[str, Any]] = []
+        for fp, fmeas, fvouch in zip(future_periods, future_meas, future_vouchers):
+            fp_est_cents = sum(
+                float((stat.get("costInclTax") or {}).get("estimatedAmount") or 0)
+                for node in fmeas
+                for stat in (node.get("metaData") or {}).get("statistics", [])
+            )
+            fp_est_nzd = round(fp_est_cents / 100, 2)
+            # Use voucherValue (full original amount) for future packs — balance equals
+            # voucherValue for packs not yet redeemed against a future period.
+            fp_bought_nzd = round(
+                sum(float(v.get("voucherValue") or 0) for v in fvouch) / 100, 2
+            )
+            fp_still_nzd = round(max(0.0, fp_est_nzd - fp_bought_nzd), 2)
+            fp_coverage = round(
+                min(100.0, fp_bought_nzd / fp_est_nzd * 100)
+                if fp_est_nzd > 0
+                else 100.0,
+                1,
+            )
+            upcoming_periods.append(
+                {
+                    "period_start": fp["start"],
+                    "period_end": fp["end"],
+                    "cost_estimated_nzd": fp_est_nzd,
+                    "voucher_bought_nzd": fp_bought_nzd,
+                    "cost_still_to_buy_nzd": fp_still_nzd,
+                    "coverage_pct": fp_coverage,
+                }
+            )
+
         return {
             "balance": balance,
             "overdue_balance": overdue_balance,
@@ -520,8 +733,14 @@ class PowershopAPIClient:
             "account_number": account_number,
             "usage_today_kwh": usage_today_kwh,
             "usage_period_kwh": usage_period_kwh,
-            "cost_period_nzd": cost_period_nzd,
+            # cost_period_nzd kept as alias for backward compatibility (= EST)
+            "cost_period_nzd": cost_estimated_nzd,
+            "cost_used_nzd": cost_used_nzd,
+            "cost_estimated_nzd": cost_estimated_nzd,
+            "cost_still_to_buy_nzd": cost_still_to_buy_nzd,
+            "period_coverage_pct": period_coverage_pct,
             "voucher_balance_nzd": voucher_balance_nzd,
             "voucher_list": voucher_list,
             "voucher_count": len(voucher_list),
+            "upcoming_periods": upcoming_periods,
         }

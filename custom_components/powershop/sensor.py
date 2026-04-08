@@ -100,6 +100,37 @@ SENSORS = [
         state_class=SensorStateClass.TOTAL,
         icon="mdi:ticket-percent",
     ),
+    SensorEntityDescription(
+        key="period_used_cost",
+        name="Used This Billing Period",
+        native_unit_of_measurement="NZD",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        icon="mdi:cash-check",
+    ),
+    SensorEntityDescription(
+        key="period_estimated_cost",
+        name="Estimated Cost This Billing Period",
+        native_unit_of_measurement="NZD",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        icon="mdi:cash-clock",
+    ),
+    SensorEntityDescription(
+        key="period_still_to_buy",
+        name="Still To Buy This Billing Period",
+        native_unit_of_measurement="NZD",
+        device_class=SensorDeviceClass.MONETARY,
+        state_class=SensorStateClass.TOTAL,
+        icon="mdi:cart-plus",
+    ),
+    SensorEntityDescription(
+        key="period_coverage_pct",
+        name="Billing Period Pack Coverage",
+        native_unit_of_measurement="%",
+        state_class=SensorStateClass.MEASUREMENT,
+        icon="mdi:percent",
+    ),
 ]
 
 
@@ -221,6 +252,14 @@ class PowershopSensor(CoordinatorEntity, SensorEntity):
             return data.get("cost_period_nzd")
         if key == "voucher_balance":
             return data.get("voucher_balance_nzd")
+        if key == "period_used_cost":
+            return data.get("cost_used_nzd")
+        if key == "period_estimated_cost":
+            return data.get("cost_estimated_nzd")
+        if key == "period_still_to_buy":
+            return data.get("cost_still_to_buy_nzd")
+        if key == "period_coverage_pct":
+            return data.get("period_coverage_pct")
 
         return None
 
@@ -242,6 +281,11 @@ class PowershopSensor(CoordinatorEntity, SensorEntity):
         if self.entity_description.key == "cost_billing_period":
             attrs["billing_period_start"] = data.get("period_start")
             attrs["billing_period_end"] = data.get("period_end")
+
+        if self.entity_description.key == "period_estimated_cost":
+            attrs["billing_period_start"] = data.get("period_start")
+            attrs["billing_period_end"] = data.get("period_end")
+            attrs["upcoming_periods"] = data.get("upcoming_periods", [])
 
         if self.entity_description.key == "voucher_balance":
             attrs["voucher_count"] = data.get("voucher_count")
