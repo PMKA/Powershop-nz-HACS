@@ -100,4 +100,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ##  Disclaimer
 
-This integration is **not officially affiliated** with Powershop. Use at your own risk, i just wanted my powershop data in HA :)
+This integration is **not officially affiliated** with Powershop. Use at your own risk, I just wanted to have my rate data available in HA, reached out to Powershop to ask for API access but was nothing available so built my own.
