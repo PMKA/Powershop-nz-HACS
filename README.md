@@ -94,10 +94,10 @@ If your session expires, Home Assistant will prompt you to re-authenticate. Simp
 - Initial release
 - Rate monitoring via the legacy `secure.powershop.co.nz` site
 
-## ⚖️ License
+##  License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🚨 Disclaimer
+##  Disclaimer
 
 This integration is **not officially affiliated** with Powershop. Use at your own risk, i just wanted my powershop data in HA :)
