@@ -6,7 +6,6 @@
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 [![GitHub Release](https://img.shields.io/github/release/PMKA/powershop-nz.svg)](https://github.com/PMKA/powershop-nz/releases)
-[![GitHub Activity](https://img.shields.io/github/commit-activity/y/PMKA/powershop-nz.svg)](https://github.com/PMKA/powershop-nz/commits/main)
 
 A Home Assistant custom component for **Powershop New Zealand** customers. Monitor your account balance, electricity rates, usage, and Power Pack coverage — updated every 15 minutes.
 
