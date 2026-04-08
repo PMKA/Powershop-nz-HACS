@@ -693,6 +693,10 @@ class PowershopAPIClient:
 
         # ── Upcoming billing periods ───────────────────────────────────────
         upcoming_periods: List[Dict[str, Any]] = []
+        # Pool of currently redeemable packs that can cover upcoming periods without
+        # dedicated future packs (same approach the website uses for near-term periods).
+        remaining_pool_nzd = voucher_balance_nzd
+
         for fp, fmeas, fvouch in zip(future_periods, future_meas, future_vouchers):
             fp_est_cents = sum(
                 float((stat.get("costInclTax") or {}).get("estimatedAmount") or 0)
@@ -700,11 +704,18 @@ class PowershopAPIClient:
                 for stat in (node.get("metaData") or {}).get("statistics", [])
             )
             fp_est_nzd = round(fp_est_cents / 100, 2)
-            # Use voucherValue (full original amount) for future packs — balance equals
-            # voucherValue for packs not yet redeemed against a future period.
-            fp_bought_nzd = round(
+            # Dedicated future packs purchased specifically for this period
+            fp_dedicated_nzd = round(
                 sum(float(v.get("voucherValue") or 0) for v in fvouch) / 100, 2
             )
+            # Fill any shortfall from the redeemable pool (capped at estimated cost)
+            pool_used_nzd = round(
+                min(remaining_pool_nzd, max(0.0, fp_est_nzd - fp_dedicated_nzd)), 2
+            )
+            remaining_pool_nzd = round(
+                max(0.0, remaining_pool_nzd - pool_used_nzd), 2
+            )
+            fp_bought_nzd = round(fp_dedicated_nzd + pool_used_nzd, 2)
             fp_still_nzd = round(max(0.0, fp_est_nzd - fp_bought_nzd), 2)
             fp_coverage = round(
                 min(100.0, fp_bought_nzd / fp_est_nzd * 100)

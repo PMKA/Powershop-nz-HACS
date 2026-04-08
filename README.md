@@ -97,6 +97,10 @@ Your account number and property ID are discovered automatically. Home Assistant
 
 ## 📝 Changelog
 
+### v2.0.4 (2026-04-09)
+- Fixed upcoming billing period pack coverage showing $0 for periods without dedicated future packs
+- The redeemable pack pool now cascades across future periods, matching how the Powershop app calculates coverage
+
 ### v2.0.3 (2026-04-09)
 - Fixed all sensors showing unavailable after updating to v2.0.2
 - Fixed Power Pack sensors failing to load on some accounts
