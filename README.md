@@ -96,6 +96,13 @@ Your account number and property ID are discovered automatically. Home Assistant
 
 ## 📝 Changelog
 
+### v2.0.5 (2026-04-10)
+- Updated integration icon — new transparent PNG, shown in HA integrations page and HACS store
+- Documented Firebase API key as public project identifier (not a secret)
+- Added GitHub secret scanning allowlist to suppress false-positive alerts
+- Removed developer/debug scripts from the repository
+- Repository URLs updated following rename to `powershop-nz`
+
 ### v2.0.4 (2026-04-09)
 - Fixed upcoming billing period pack coverage showing $0 for periods without dedicated future packs
 - The redeemable pack pool now cascades across future periods, matching how the Powershop app calculates coverage
