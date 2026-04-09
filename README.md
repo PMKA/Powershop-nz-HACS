@@ -88,11 +88,7 @@ Your account number and property ID are discovered automatically. Home Assistant
 
 ## Troubleshooting
 
-**No OTP email?** Check spam, make sure you're using the right address, and try again — codes expire quickly.
-
-**Sensors unavailable?** Check **Settings → System → Logs** for anything prefixed with `powershop`. If your session expired, HA will prompt you to log in again.
-
-**Data stale?** The integration polls every 15 minutes. If things look off, confirm your account is active at [app.powershop.nz](https://app.powershop.nz).
+**No OTP email?** Check spam, make sure you're using the right address, and try again, i found at some times of day the emails were slow to come through.
 
 ## 📝 Changelog
 
