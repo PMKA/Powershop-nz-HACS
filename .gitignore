@@ -26,6 +26,8 @@ test_api.py
 explore_api.py
 analyse_har.py
 check_future.py
+check.py
+debug_*.py
 custom_components/__init__.py
 
 # HAR captures (browser network logs — may contain auth tokens)
